@@ -26,7 +26,7 @@ const app = new Hono().use(
 );
 
 app.post(
-  '/images/signed-url',
+  '/signed-url',
   zValidator(
     'json',
     z.object({
