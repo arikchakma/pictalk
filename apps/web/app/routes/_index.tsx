@@ -15,6 +15,7 @@ import { cn } from '~/utils/classname';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { httpPost } from '~/utils/http';
 import { useCompletion } from '~/hooks/use-completion';
+import { useStreamAudio } from '~/hooks/use-stream-audio';
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -33,18 +34,11 @@ type FileWithPreview = File & { preview?: string };
 
 export default function IndexPage() {
   const [file, setFile] = useState<FileWithPreview | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const [audioLoading, setAudioLoading] = useState(false);
-  const [audioLoaded, setAudioLoaded] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
 
   const { completion, sendCompletion, status } = useCompletion({
     endpoint: `${import.meta.env.VITE_API_URL}/describe`,
   });
+  const { play, isPlaying, isAudioLoading, audioRef, clear } = useStreamAudio();
 
   const onDrop: OnDrop = useCallback((acceptedFiles) => {
     const firstFile = acceptedFiles[0];
@@ -69,22 +63,15 @@ export default function IndexPage() {
   }, []);
 
   const handleImageDescribe = useCallback(async () => {
-    if (!file || audioLoading) {
+    if (!file || isAudioLoading) {
       return;
     }
 
     if (audioRef.current) {
       if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-        setAudioLoaded(false);
-        audioRef.current = null;
+        clear();
       }
     }
-
-    setAudioLoading(true);
-    setAudioLoaded(false);
-    setIsPlaying(false);
 
     const { url: presignedUrl, key } = await getPresignedDetails(
       file.name,
@@ -100,48 +87,16 @@ export default function IndexPage() {
     });
 
     const result = await sendCompletion('', { imageKey: key });
-    console.log('-'.repeat(20));
-    console.log(result);
-    console.log('-'.repeat(20));
+    if (!result) {
+      alert('Error generating audio');
+      return;
+    }
 
-    // if (!result) {
-    //   setAudioLoading(false);
-    //   setAudioLoaded(false);
-    //   setIsPlaying(false);
-    //   alert('Error generating audio');
-    //   return;
-    // }
+    const url = new URL('/speak', import.meta.env.VITE_API_URL);
+    url.searchParams.append('text', result);
+    const audioUrl = url.toString();
 
-    // const url = new URL('/speak', import.meta.env.VITE_API_URL);
-    // url.searchParams.append('text', result);
-    // const audioUrl = url.toString();
-
-    // const audio = new Audio();
-    // audio.preload = 'none';
-    // audioRef.current = audio;
-
-    // audio.onerror = () => {
-    //   setAudioLoading(false);
-    //   setAudioLoaded(false);
-    //   setIsPlaying(false);
-    //   alert('Error generating audio');
-    // };
-
-    // audio.onplay = () => {
-    //   setIsPlaying(true);
-    //   setAudioLoaded(true);
-    //   setAudioLoading(false);
-    // };
-
-    // audio.onpause = () => {
-    //   setIsPlaying(false);
-    // };
-    // audio.onended = () => {
-    //   setIsPlaying(false);
-    // };
-
-    // audio.autoplay = true;
-    // audio.src = audioUrl;
+    play(audioUrl);
   }, [file]);
 
   useEffect(() => {
@@ -218,11 +173,7 @@ export default function IndexPage() {
           className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-zinc-100 p-1 py-2.5 leading-none tracking-wide text-zinc-600 transition-colors hover:bg-zinc-200 disabled:cursor-not-allowed disabled:text-zinc-400 data-[loading=true]:cursor-wait"
           onClick={() => {
             setFile(null);
-            setAudioLoaded(false);
-            setAudioLoading(false);
-            setIsPlaying(false);
-            audioRef.current?.pause();
-            audioRef.current = null;
+            clear();
           }}
         >
           <TrashIcon className="size-4" />
@@ -230,34 +181,31 @@ export default function IndexPage() {
         </button>
         <button
           className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-zinc-100 p-1 py-2.5 leading-none tracking-wide text-zinc-600 transition-colors hover:bg-zinc-200 disabled:cursor-not-allowed disabled:text-zinc-400 data-[loading=true]:cursor-wait"
-          disabled={audioLoading}
+          disabled={isAudioLoading}
           onClick={() => {
-            if (audioLoading || isPlaying) {
-              audioRef.current?.pause();
-              setIsPlaying(false);
-              setAudioLoaded(false);
-              audioRef.current = null;
+            if (isAudioLoading || isPlaying) {
+              clear();
               return;
             }
 
             handleImageDescribe();
           }}
         >
-          {audioLoading && !isPlaying && (
+          {isAudioLoading && !isPlaying && (
             <>
               <Loader2Icon className="size-4 animate-spin" />
               <span>Generating audio...</span>
             </>
           )}
 
-          {!audioLoading && !isPlaying && (
+          {!isAudioLoading && !isPlaying && (
             <>
               <PlayIcon className="size-4" />
               <span>Describe Image</span>
             </>
           )}
 
-          {!audioLoading && isPlaying && (
+          {!isAudioLoading && isPlaying && (
             <>
               <PauseIcon className="size-4" />
               <span>Pause</span>
