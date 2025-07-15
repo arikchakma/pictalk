@@ -12,7 +12,7 @@ import {
   type FileRejection,
 } from 'react-dropzone';
 import { cn } from '~/utils/classname';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { httpPost } from '~/utils/http';
 import { useCompletion } from '~/hooks/use-completion';
 import { useStreamAudio } from '~/hooks/use-stream-audio';
@@ -53,14 +53,6 @@ export default function IndexPage() {
       'image/*': ['.jpg', '.jpeg', '.png', '.heic', '.heif'],
     },
   });
-
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/worker.js')
-        .catch((err) => console.error('SW registration failed', err));
-    }
-  }, []);
 
   const handleImageDescribe = useCallback(async () => {
     if (!file || isAudioLoading) {
@@ -148,6 +140,8 @@ export default function IndexPage() {
     );
   }
 
+  const isInfoLoading = status !== 'idle';
+
   return (
     <section className="mx-auto mt-10 flex max-w-md flex-col">
       {title}
@@ -181,7 +175,7 @@ export default function IndexPage() {
         </button>
         <button
           className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-zinc-100 p-1 py-2.5 leading-none tracking-wide text-zinc-600 transition-colors hover:bg-zinc-200 disabled:cursor-not-allowed disabled:text-zinc-400 data-[loading=true]:cursor-wait"
-          disabled={isAudioLoading}
+          disabled={isAudioLoading || isInfoLoading}
           onClick={() => {
             if (isAudioLoading || isPlaying) {
               clear();
@@ -198,17 +192,24 @@ export default function IndexPage() {
             </>
           )}
 
-          {!isAudioLoading && !isPlaying && (
+          {!isAudioLoading && !isPlaying && !isInfoLoading && (
             <>
               <PlayIcon className="size-4" />
               <span>Describe Image</span>
             </>
           )}
 
+          {!isAudioLoading && !isPlaying && isInfoLoading && (
+            <>
+              <Loader2Icon className="size-4 animate-spin" />
+              <span>Generating audio...</span>
+            </>
+          )}
+
           {!isAudioLoading && isPlaying && (
             <>
               <PauseIcon className="size-4" />
-              <span>Pause</span>
+              <span>Done</span>
             </>
           )}
         </button>
