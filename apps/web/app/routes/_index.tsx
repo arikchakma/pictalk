@@ -33,6 +33,7 @@ type OnDrop<T extends File = File> = (
 type FileWithPreview = File & { preview?: string };
 
 export default function IndexPage() {
+  const [rawFile, setRawFile] = useState<File | null>(null);
   const [file, setFile] = useState<FileWithPreview | null>(null);
 
   const { completion, sendCompletion, status } = useCompletion({
@@ -44,6 +45,7 @@ export default function IndexPage() {
     const firstFile = acceptedFiles[0];
     const preview = URL.createObjectURL(firstFile);
     Object.assign(firstFile, { preview });
+    setRawFile(firstFile);
     setFile(firstFile);
   }, []);
 
@@ -55,7 +57,7 @@ export default function IndexPage() {
   });
 
   const handleImageDescribe = useCallback(async () => {
-    if (!file || isAudioLoading) {
+    if (!rawFile || isAudioLoading) {
       return;
     }
 
@@ -65,20 +67,12 @@ export default function IndexPage() {
       }
     }
 
-    const { url: presignedUrl, key } = await getPresignedDetails(
-      file.name,
-      file.type,
-      file.size
-    );
-    await fetch(presignedUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': file.type,
-      },
-      body: file,
+    const formData = new FormData();
+    formData.append('image', rawFile);
+    const result = await sendCompletion('', {
+      headers: {},
+      body: formData,
     });
-
-    const result = await sendCompletion('', { imageKey: key });
     if (!result) {
       alert('Error generating audio');
       return;
@@ -89,7 +83,7 @@ export default function IndexPage() {
     const audioUrl = url.toString();
 
     play(audioUrl);
-  }, [file]);
+  }, [rawFile]);
 
   useEffect(() => {
     return () => {
@@ -140,7 +134,7 @@ export default function IndexPage() {
     );
   }
 
-  const isInfoLoading = status !== 'idle';
+  const isInfoLoading = status !== 'idle' && status !== 'error';
 
   return (
     <section className="mx-auto mt-10 flex max-w-md flex-col">
@@ -167,6 +161,7 @@ export default function IndexPage() {
           className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-zinc-100 p-1 py-2.5 leading-none tracking-wide text-zinc-600 transition-colors hover:bg-zinc-200 disabled:cursor-not-allowed disabled:text-zinc-400 data-[loading=true]:cursor-wait"
           onClick={() => {
             setFile(null);
+            setRawFile(null);
             clear();
           }}
         >

@@ -19,7 +19,7 @@ export function useCompletion(options: UseCompletionOptions) {
   >('idle');
 
   const sendCompletion = useCallback(
-    async (prompt: string, body: Record<string, any>) => {
+    async (prompt: string, options: RequestInit = {}) => {
       try {
         setStatus('loading');
         setCompletion(null);
@@ -30,10 +30,11 @@ export function useCompletion(options: UseCompletionOptions) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...options.headers,
           },
-          body: JSON.stringify({ prompt, ...body }),
+          body: JSON.stringify({ prompt }),
+          ...options,
           signal: abortControllerRef.current?.signal,
-          credentials: 'include',
         });
 
         if (!response.ok) {

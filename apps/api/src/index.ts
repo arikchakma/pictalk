@@ -2,17 +2,12 @@ import 'dotenv/config';
 
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import { s3Client } from './lib/r2';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { config } from './lib/config';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import path from 'node:path';
 import { formatDataForStream, streamTextFromImage } from './lib/ai';
 import { cors } from 'hono/cors';
 import { openai } from './lib/openai';
-import { stream, streamText } from 'hono/streaming';
+import { streamText } from 'hono/streaming';
 
 const app = new Hono().use(
   cors({
@@ -27,53 +22,18 @@ const app = new Hono().use(
 );
 
 app.post(
-  '/signed-url',
-  zValidator(
-    'json',
-    z.object({
-      name: z.string().min(1),
-      size: z.number().min(1),
-      type: z.string().min(1),
-    })
-  ),
-  async (c) => {
-    const { name, size, type } = c.req.valid('json');
-
-    const randomId = crypto.randomUUID();
-    const ext = path.extname(name);
-    const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    const key = `i/${date}/${randomId}${ext}`;
-
-    const command = new PutObjectCommand({
-      Bucket: config.S3_BUCKET_NAME,
-      Key: key,
-      ContentType: type,
-      ContentLength: size,
-    });
-
-    const url = await getSignedUrl(s3Client, command, {
-      expiresIn: 60 * 2, // 2 minutes
-    });
-
-    return c.json({
-      url,
-      key,
-    });
-  }
-);
-
-app.post(
   '/describe',
   zValidator(
-    'json',
+    'form',
     z.object({
-      imageKey: z.string().min(1),
+      image: z.instanceof(File),
     })
   ),
   async (c) => {
-    const { imageKey } = c.req.valid('json');
-    const imageUrl = `https://cdn.arikko.dev/${imageKey}`;
-    const result = streamTextFromImage(imageUrl);
+    const { image } = c.req.valid('form');
+    const arrayBuffer = await image.arrayBuffer();
+
+    const result = streamTextFromImage(arrayBuffer);
 
     return streamText(c, async (stream) => {
       for await (const chunk of result.textStream) {
