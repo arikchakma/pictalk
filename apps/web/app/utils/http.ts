@@ -35,10 +35,6 @@ export async function httpCall<ResponseType = AppResponse>(
       : `${import.meta.env.VITE_API_URL}${_url}`;
     const isMultiPartFormData = options?.body instanceof FormData;
 
-    console.log('-'.repeat(20));
-    console.log(url);
-    console.log('-'.repeat(20));
-
     const headers = new Headers({
       Accept: 'application/json',
       ...(options?.headers ?? {}),

@@ -14,6 +14,7 @@ import {
 import { cn } from '~/utils/classname';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { httpPost } from '~/utils/http';
+import { useCompletion } from '~/hooks/use-completion';
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -40,6 +41,10 @@ export default function IndexPage() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+
+  const { completion, sendCompletion, status } = useCompletion({
+    endpoint: `${import.meta.env.VITE_API_URL}/describe`,
+  });
 
   const onDrop: OnDrop = useCallback((acceptedFiles) => {
     const firstFile = acceptedFiles[0];
@@ -81,10 +86,6 @@ export default function IndexPage() {
     setAudioLoaded(false);
     setIsPlaying(false);
 
-    console.log('-'.repeat(20));
-    console.log(file);
-    console.log('-'.repeat(20));
-
     const { url: presignedUrl, key } = await getPresignedDetails(
       file.name,
       file.type,
@@ -98,36 +99,49 @@ export default function IndexPage() {
       body: file,
     });
 
-    const url = new URL('/speak', import.meta.env.VITE_API_URL);
-    url.searchParams.append('imageKey', key);
-    const audioUrl = url.toString();
+    const result = await sendCompletion('', { imageKey: key });
+    console.log('-'.repeat(20));
+    console.log(result);
+    console.log('-'.repeat(20));
 
-    const audio = new Audio();
-    audio.preload = 'none';
-    audioRef.current = audio;
+    // if (!result) {
+    //   setAudioLoading(false);
+    //   setAudioLoaded(false);
+    //   setIsPlaying(false);
+    //   alert('Error generating audio');
+    //   return;
+    // }
 
-    audio.onerror = () => {
-      setAudioLoading(false);
-      setAudioLoaded(false);
-      setIsPlaying(false);
-      alert('Error generating audio');
-    };
+    // const url = new URL('/speak', import.meta.env.VITE_API_URL);
+    // url.searchParams.append('text', result);
+    // const audioUrl = url.toString();
 
-    audio.onplay = () => {
-      setIsPlaying(true);
-      setAudioLoaded(true);
-      setAudioLoading(false);
-    };
+    // const audio = new Audio();
+    // audio.preload = 'none';
+    // audioRef.current = audio;
 
-    audio.onpause = () => {
-      setIsPlaying(false);
-    };
-    audio.onended = () => {
-      setIsPlaying(false);
-    };
+    // audio.onerror = () => {
+    //   setAudioLoading(false);
+    //   setAudioLoaded(false);
+    //   setIsPlaying(false);
+    //   alert('Error generating audio');
+    // };
 
-    audio.autoplay = true;
-    audio.src = audioUrl;
+    // audio.onplay = () => {
+    //   setIsPlaying(true);
+    //   setAudioLoaded(true);
+    //   setAudioLoading(false);
+    // };
+
+    // audio.onpause = () => {
+    //   setIsPlaying(false);
+    // };
+    // audio.onended = () => {
+    //   setIsPlaying(false);
+    // };
+
+    // audio.autoplay = true;
+    // audio.src = audioUrl;
   }, [file]);
 
   useEffect(() => {
@@ -193,6 +207,12 @@ export default function IndexPage() {
         </div>
       </div>
 
+      {completion && (
+        <div className="mt-4">
+          <p>{completion}</p>
+        </div>
+      )}
+
       <div className="mt-4 grid grid-cols-2 gap-2">
         <button
           className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-zinc-100 p-1 py-2.5 leading-none tracking-wide text-zinc-600 transition-colors hover:bg-zinc-200 disabled:cursor-not-allowed disabled:text-zinc-400 data-[loading=true]:cursor-wait"
@@ -201,6 +221,7 @@ export default function IndexPage() {
             setAudioLoaded(false);
             setAudioLoading(false);
             setIsPlaying(false);
+            audioRef.current?.pause();
             audioRef.current = null;
           }}
         >

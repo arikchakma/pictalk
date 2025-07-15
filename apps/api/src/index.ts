@@ -9,9 +9,10 @@ import { config } from './lib/config';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import path from 'node:path';
-import { generateTextFromImage } from './lib/ai';
+import { formatDataForStream, streamTextFromImage } from './lib/ai';
 import { cors } from 'hono/cors';
 import { openai } from './lib/openai';
+import { stream, streamText } from 'hono/streaming';
 
 const app = new Hono().use(
   cors({
@@ -62,18 +63,36 @@ app.post(
 );
 
 app.post(
-  '/speak',
+  '/describe',
   zValidator(
-    'query',
+    'json',
     z.object({
       imageKey: z.string().min(1),
     })
   ),
   async (c) => {
-    const { imageKey } = c.req.valid('query');
+    const { imageKey } = c.req.valid('json');
     const imageUrl = `https://cdn.arikko.dev/${imageKey}`;
-    const text = await generateTextFromImage(imageUrl);
+    const result = streamTextFromImage(imageUrl);
 
+    return streamText(c, async (stream) => {
+      for await (const chunk of result.textStream) {
+        stream.write(formatDataForStream('message', chunk));
+      }
+    });
+  }
+);
+
+app.post(
+  '/speak',
+  zValidator(
+    'query',
+    z.object({
+      text: z.string().min(1),
+    })
+  ),
+  async (c) => {
+    const { text } = c.req.valid('query');
     const response = await openai.audio.speech.create({
       model: 'gpt-4o-mini-tts',
       voice: 'sage',
