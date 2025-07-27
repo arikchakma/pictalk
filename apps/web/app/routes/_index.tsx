@@ -78,6 +78,7 @@ export default function IndexPage() {
       return;
     }
 
+    console.log(result);
     const url = new URL('/speak', import.meta.env.VITE_API_URL);
     url.searchParams.append('text', result);
     const audioUrl = url.toString();

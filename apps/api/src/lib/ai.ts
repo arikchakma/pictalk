@@ -1,16 +1,25 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { type ImagePart, streamText } from 'ai';
+import {
+  type ImagePart,
+  streamText,
+  experimental_generateSpeech as generateSpeech,
+} from 'ai';
 import { HTTPException } from 'hono/http-exception';
 import { config } from './config';
+import { createOllama } from 'ollama-ai-provider';
 
 const openai_sdk = createOpenAI({
   apiKey: config.OPENAI_API_KEY,
 });
 
+const ollama = createOllama({
+  baseURL: 'http://localhost:11434/api',
+});
+
 export function streamTextFromImage(image: ImagePart['image']) {
   try {
     return streamText({
-      model: openai_sdk.chat('gpt-4o-mini'),
+      model: ollama('llava:7b'),
       system:
         'You are great at describing images. You are given an image and you need to describe it in a way that is easy to understand for blind people. Keep the description short and concise. Do not include any other text than the description.',
       messages: [
@@ -29,6 +38,29 @@ export function streamTextFromImage(image: ImagePart['image']) {
     console.error(error);
     throw new HTTPException(500, {
       message: 'Failed to generate text from image',
+    });
+  }
+}
+
+export function tts(text: string) {
+  try {
+    if (!ollama.speechModel) {
+      throw new HTTPException(500, {
+        message: 'No speech model found',
+      });
+    }
+
+    return generateSpeech({
+      model: ollama.speechModel('566f61870856'),
+      text,
+      voice: 'tara',
+      instructions:
+        'Speak in a cheerful and positive tone. Speak in a way that is easy to understand for blind people.',
+    });
+  } catch (error) {
+    console.error(error);
+    throw new HTTPException(500, {
+      message: 'Failed to generate speech',
     });
   }
 }

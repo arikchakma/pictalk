@@ -4,10 +4,12 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
-import { formatDataForStream, streamTextFromImage } from './lib/ai';
+import { formatDataForStream, streamTextFromImage, tts } from './lib/ai';
 import { cors } from 'hono/cors';
 import { openai } from './lib/openai';
 import { streamText } from 'hono/streaming';
+import { writeFile } from 'fs/promises';
+import { ollama } from './lib/ollama';
 
 const app = new Hono().use(
   cors({
@@ -53,22 +55,50 @@ app.post(
   ),
   async (c) => {
     const { text } = c.req.valid('query');
-    const response = await openai.audio.speech.create({
-      model: 'gpt-4o-mini-tts',
-      voice: 'sage',
-      input: text,
-      instructions:
-        'Speak in a cheerful and positive tone. Speak in a way that is easy to understand for blind people.',
-      response_format: 'wav',
+
+    // const result = await tts(text);
+    // await writeFile('audio.wav', result.audio.uint8Array);
+
+    // return new Response(new Blob([result.audio.base64]), {
+    //   headers: {
+    //     'Content-Type': 'audio/wav',
+    //     'Content-Disposition': 'attachment; filename="audio.wav"',
+    //     'Cache-Control': 'no-cache',
+    //   },
     });
 
-    return new Response(response.body, {
-      headers: {
-        'Content-Type': 'audio/wav',
-        'Content-Disposition': 'attachment; filename="audio.wav"',
-        'Cache-Control': 'no-cache',
-      },
-    });
+    // send the audio to the client
+    //   return new Response(new Blob(result.audio.uint8Array, { type: 'audio/wav' }), {
+    //   headers: {
+    //     'Content-Type': 'audio/wav',
+    //     'Content-Disposition': 'attachment; filename="audio.wav"',
+    //     'Cache-Control': 'no-cache',
+    //   },
+    // });
+
+    // return new Response(result.audio.uint8Array, {
+    //   headers: {
+    //     'Content-Type': 'audio/wav',
+    //     'Content-Disposition': 'attachment; filename="audio.wav"',
+    //     'Cache-Control': 'no-cache',
+    //   },
+    // });
+    // const response = await openai.audio.speech.create({
+    //   model: 'gpt-4o-mini-tts',
+    //   voice: 'sage',
+    //   input: text,
+    //   instructions:
+    //     'Speak in a cheerful and positive tone. Speak in a way that is easy to understand for blind people.',
+    //   response_format: 'wav',
+    // });
+
+    // return new Response(response.body, {
+    //   headers: {
+    //     'Content-Type': 'audio/wav',
+    //     'Content-Disposition': 'attachment; filename="audio.wav"',
+    //     'Cache-Control': 'no-cache',
+    //   },
+    // });
   }
 );
 
