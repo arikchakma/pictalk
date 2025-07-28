@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 export function useStreamAudio() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -83,14 +83,6 @@ export function useStreamAudio() {
     audioRef.current = null;
     setIsPlaying(false);
     setIsAudioLoading(false);
-  }, []);
-
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/worker.js')
-        .catch((err) => console.error('SW registration failed', err));
-    }
   }, []);
 
   return {

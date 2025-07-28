@@ -1,15 +1,18 @@
 import 'dotenv/config';
 
-import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
-import { zValidator } from '@hono/zod-validator';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import crypto from 'node:crypto';
+
 import { z } from 'zod';
-import { formatDataForStream, streamTextFromImage, tts } from './lib/ai';
+import { Hono } from 'hono';
+import { serve } from '@hono/node-server';
+import { zValidator } from '@hono/zod-validator';
 import { cors } from 'hono/cors';
-import { openai } from './lib/openai';
-import { streamText } from 'hono/streaming';
-import { writeFile } from 'fs/promises';
-import { ollama } from './lib/ollama';
+import { formatDataForStream, streamTextFromImage } from './lib/ai';
+import { stream, streamText } from 'hono/streaming';
+import { aiffToWav, tts } from './lib/tts';
 
 const app = new Hono().use(
   cors({
@@ -45,6 +48,39 @@ app.post(
   }
 );
 
+app.get(
+  '/speak',
+  zValidator(
+    'query',
+    z.object({
+      text: z.string().min(1),
+    })
+  ),
+  async (c) => {
+    const { text } = c.req.valid('query');
+
+    c.header('Content-Type', 'audio/wav');
+    c.header('Content-Disposition', 'attachment; filename="audio.wav"');
+    c.header('Cache-Control', 'no-cache');
+    c.header('Transfer-Encoding', 'chunked');
+
+    return stream(c, async (stream) => {
+      const outputFile = path.join(os.tmpdir(), crypto.randomUUID() + '.aiff');
+      await tts(text, outputFile);
+      const wavFile = path.join(os.tmpdir(), crypto.randomUUID() + '.wav');
+      await aiffToWav(outputFile, wavFile);
+
+      const readableStream = fs.createReadStream(wavFile);
+      for await (const chunk of readableStream) {
+        stream.write(chunk);
+      }
+
+      fs.unlinkSync(outputFile);
+      fs.unlinkSync(wavFile);
+    });
+  }
+);
+
 app.post(
   '/speak',
   zValidator(
@@ -56,49 +92,25 @@ app.post(
   async (c) => {
     const { text } = c.req.valid('query');
 
-    // const result = await tts(text);
-    // await writeFile('audio.wav', result.audio.uint8Array);
+    c.header('Content-Type', 'audio/wav');
+    c.header('Content-Disposition', 'attachment; filename="audio.wav"');
+    c.header('Cache-Control', 'no-cache');
+    c.header('Transfer-Encoding', 'chunked');
 
-    // return new Response(new Blob([result.audio.base64]), {
-    //   headers: {
-    //     'Content-Type': 'audio/wav',
-    //     'Content-Disposition': 'attachment; filename="audio.wav"',
-    //     'Cache-Control': 'no-cache',
-    //   },
+    return stream(c, async (stream) => {
+      const outputFile = path.join(os.tmpdir(), crypto.randomUUID() + '.aiff');
+      await tts(text, outputFile);
+      const wavFile = path.join(os.tmpdir(), crypto.randomUUID() + '.wav');
+      await aiffToWav(outputFile, wavFile);
+
+      const readableStream = fs.createReadStream(wavFile);
+      for await (const chunk of readableStream) {
+        stream.write(chunk);
+      }
+
+      fs.unlinkSync(outputFile);
+      fs.unlinkSync(wavFile);
     });
-
-    // send the audio to the client
-    //   return new Response(new Blob(result.audio.uint8Array, { type: 'audio/wav' }), {
-    //   headers: {
-    //     'Content-Type': 'audio/wav',
-    //     'Content-Disposition': 'attachment; filename="audio.wav"',
-    //     'Cache-Control': 'no-cache',
-    //   },
-    // });
-
-    // return new Response(result.audio.uint8Array, {
-    //   headers: {
-    //     'Content-Type': 'audio/wav',
-    //     'Content-Disposition': 'attachment; filename="audio.wav"',
-    //     'Cache-Control': 'no-cache',
-    //   },
-    // });
-    // const response = await openai.audio.speech.create({
-    //   model: 'gpt-4o-mini-tts',
-    //   voice: 'sage',
-    //   input: text,
-    //   instructions:
-    //     'Speak in a cheerful and positive tone. Speak in a way that is easy to understand for blind people.',
-    //   response_format: 'wav',
-    // });
-
-    // return new Response(response.body, {
-    //   headers: {
-    //     'Content-Type': 'audio/wav',
-    //     'Content-Disposition': 'attachment; filename="audio.wav"',
-    //     'Cache-Control': 'no-cache',
-    //   },
-    // });
   }
 );
 

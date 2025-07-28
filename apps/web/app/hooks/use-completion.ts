@@ -96,10 +96,17 @@ export function useCompletion(options: UseCompletionOptions) {
     abortControllerRef.current = null;
   }, []);
 
+  const reset = useCallback(() => {
+    setStatus('idle');
+    setCompletion(null);
+    abortControllerRef.current = null;
+  }, []);
+
   return {
     completion,
     sendCompletion,
     status,
     stop,
+    reset,
   };
 }

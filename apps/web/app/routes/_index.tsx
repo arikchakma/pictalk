@@ -36,7 +36,7 @@ export default function IndexPage() {
   const [rawFile, setRawFile] = useState<File | null>(null);
   const [file, setFile] = useState<FileWithPreview | null>(null);
 
-  const { completion, sendCompletion, status } = useCompletion({
+  const { completion, sendCompletion, status, reset } = useCompletion({
     endpoint: `${import.meta.env.VITE_API_URL}/describe`,
   });
   const { play, isPlaying, isAudioLoading, audioRef, clear } = useStreamAudio();
@@ -78,7 +78,6 @@ export default function IndexPage() {
       return;
     }
 
-    console.log(result);
     const url = new URL('/speak', import.meta.env.VITE_API_URL);
     url.searchParams.append('text', result);
     const audioUrl = url.toString();
@@ -164,6 +163,7 @@ export default function IndexPage() {
             setFile(null);
             setRawFile(null);
             clear();
+            reset();
           }}
         >
           <TrashIcon className="size-4" />
