@@ -1,16 +1,10 @@
-import { createOpenAI } from '@ai-sdk/openai';
 import {
   type ImagePart,
   streamText,
   experimental_generateSpeech as generateSpeech,
 } from 'ai';
 import { HTTPException } from 'hono/http-exception';
-import { config } from './config';
 import { createOllama } from 'ollama-ai-provider';
-
-const openai_sdk = createOpenAI({
-  apiKey: config.OPENAI_API_KEY,
-});
 
 const ollama = createOllama({
   baseURL: 'http://localhost:11434/api',
