@@ -1,12 +1,10 @@
-#import "@preview/charged-ieee:0.1.3": ieee
+#import "@preview/charged-ieee:0.1.4": ieee
 #import "@preview/lilaq:0.4.0" as lq
-#import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
-#import fletcher.shapes: house, hexagon
 
 #show: ieee.with(
   title: [AI-Powered Image Transcription for Enhanced Visual Accessibility],
   abstract: [
-    A novel real-time image transcription system has been developed to address the persistent accessibility gap faced by blind and low-vision individuals in interpreting visual content. The system employs a microservices architecture with a React-based web frontend and Node.js back-end, utilizing Ollama's LLaVA 7B model for local vision-language processing and macOS native text-to-speech APIs for audio generation. Real-time streaming capabilities are implemented through WebSocket-like connections, enabling sub-1.6-second response times from image upload to audio output. The platform supports cross-platform deployment through Docker containerization and demonstrates a scalable approach to accessibility technology. By leveraging local processing capabilities and native OS APIs, the system ensures privacy preservation while maintaining high performance. The architecture's modular design facilitates future integration of additional AI models and cross-platform speech synthesis engines. Evaluation demonstrates significant potential for transforming digital accessibility, with applications extending from educational support to professional autonomy and personal empowerment for visually impaired users.
+     We present a local-first system for AI-powered image transcription that converts everyday scenes into concise, speakable descriptions to enhance visual accessibility. The prototype streams text via Server-Sent Events for immediate feedback and uses native speech synthesis for ultra-low-latency audio. We benchmark three compact vision–language models on a 200-image accessibility set spanning street scenes, indoor environments, food items, and technical displays. Results show a clear performance frontier 7B-class model achieves 2.51s average latency and 289.77 tokens/s (efficiency: 61.65 tokens/s/GB), while attaining a 90% human-rated accuracy (45/50) across contextual relevance and accessibility-specific salience. In parallel, speech experiments indicate native synthesis outperforms open-source TTS by 10.4× in speed with 47× lower memory and higher MOS (4.6/5 vs. 3.2/5). Together, these results validate a practical path to responsive, on-device visual assistance today and motivate a voice-first, hands-free future in which a user can simply ask, “What is in front of me?” and receive trustworthy, privacy-preserving descriptions in real time. We release evaluation protocols and ablations to guide future work on latency–fidelity trade-offs, multimodal UX, and inclusive metrics.
   ],
   authors: (
     (
@@ -14,7 +12,7 @@
       department: [Department of CSE],
       organization: [Independent University, Bangladesh],
       location: [Dhaka, Bangladesh],
-      email: "2210017@iub.edu.bd"
+      email: "hello@arikko.dev"
     ),
     (
       name: "MD. Mahedi Hasan Mahin",
@@ -38,393 +36,207 @@
       email: "2230434@iub.edu.bd"
     ),
   ),
-  index-terms: ("Visual accessibility", "image transcription", "multimodal AI", "speech recognition", "text-to-speech", "GPT-4o", "Whisper", "ElevenLabs", "assistive technology", "human-centered design"),
+  index-terms: ("visual accessibility", "image transcription", "real-time captioning", "on-device AI", "voice-first interaction", "Server-Sent Events", "latency–fidelity trade-off", "privacy-by-design"),
   bibliography: bibliography("refs.bib"),
-  figure-supplement: [Fig.],
+  figure-supplement: [Figure.],
 )
 
 = Introduction
 
-Visual information is recognized as one of the most fundamental channels through which the world is comprehended and navigated. From facial recognition to scientific data interpretation, sight has been established as a primary medium of human perception and understanding. However, for individuals who are blind or experience low vision, much of this visual richness remains inaccessible without technological intervention. According to the World Health Organization (WHO), more than 2.2 billion people are affected by some form of vision impairment, with at least 1 billion cases being preventable or treatable. For the remaining population, assistive technologies have been recognized as indispensable tools for learning, professional development, and daily navigation.
+Access to the world is often a race against time. For a blind or low-vision person crossing a street, opening a menu, or navigating a crowded hallway, the difference between help that arrives in seconds and help that arrives now can define independence. Recent work in accessible AI makes clear both the promise and the gap. Generative systems can broaden participation, yet many tools still miss foundational accessibility requirements and fail to meet users where they are. @acosta2024
 
-Screen readers have been established as among the most impactful tools for this community, demonstrating effectiveness in converting text to synthesized speech or braille. However, their capabilities remain constrained to text-based content. When images, diagrams, or infographics are encountered, the depth of understanding is often reduced to vague placeholders or brief alternative descriptions, thereby eliminating context, detail, and emotional resonance. This limitation in accessing complex visual information is not merely an inconvenience; it represents a significant barrier to educational advancement, career progression, and social participation. Students are able to access textual content on lecture slides but remain unable to interpret the insights embedded in unlabeled graphs. Professionals can access visual reports but cannot discern the critical information contained within charts and visualizations. Even in personal contexts, shared family photographs are reduced to empty file names rather than meaningful memories to be experienced.
+Our project begins from lived needs and a simple ritual, a voice asks, “What is in front of me?”, and a clear, trustworthy answer arrives fast. That vision shaped a local-first image-to-audio pipeline that prioritizes responsiveness, streams partial descriptions as they form, and produces speech that is immediately usable. The historical arc leading to this work is equal parts excitement and caution. Communities relying on visual assistance have repeatedly raised concerns about where their images go, who sees them, and how long they persist. Studies of visual assistance technologies document that many users remain under informed about data handling, calling for privacy-by-design notices, controls, and consent that are themselves accessible. These concerns are not obstacles to innovation but design constraints that, if embraced, produce better, more humane systems.@stangl2022
 
-The emergence of multimodal artificial intelligence (AI) has introduced unprecedented possibilities for addressing these challenges. Vision-language models have been developed with capabilities to interpret images with remarkable nuance, generating descriptive narratives that extend far beyond simple object identification. Images are no longer merely labeled with basic identifiers but can be described with rich contextual detail, conveying spatial relationships, emotional atmosphere, and implied meaning. However, despite these technological advances, existing solutions have remained largely unidirectional, providing single static descriptions while leaving user curiosity unaddressed. The natural and dynamic process of asking follow-up questions, seeking clarifications, and focusing on specific details has rarely been supported in current implementations.
-
-The system presented in this research has been architected to address this gap through a fluid, conversational interaction model that enables real-time image exploration. A microservices-based platform has been developed that facilitates immediate image upload, processing, and audio response generation within sub-1.6-second cycles. This has been achieved through the integration of local AI processing using Ollama's LLaVA 7B model, native operating system text-to-speech APIs, and real-time streaming technologies. The resulting system enables adaptive exchanges where user exploration is guided by curiosity while AI responses are delivered with precision and contextual awareness.
-
-The approach has been informed by comprehensive analysis of 25 significant works in AI-driven accessibility, spanning computer vision, speech recognition, and inclusive interface design. While remarkable progress has been achieved in individual domains, systems that seamlessly integrate these capabilities for real-time, interactive accessibility have remained rare. Through the unification of these technologies in a human-centered design, a tool has been created that conveys not only factual details but also captures the emotion, context, and relationships embedded within visual scenes.
-
-The potential impact extends far beyond technical innovation, promising transformative applications across multiple domains. In educational environments, students will be empowered to independently study complex diagrams without external assistance, fundamentally changing how visual learning materials are accessed. In professional settings, employees will gain the ability to interpret data visualizations directly, significantly enhancing workplace autonomy and confidence. In personal contexts, experiences such as art exploration, family photograph sharing, and visual social media engagement will be restored in ways that feel natural and immediate.
-
-Looking toward the future, this technology represents the foundation for a new paradigm in digital accessibility. As AI models continue to advance and processing capabilities expand, the system's architecture will support increasingly sophisticated visual understanding, real-time video analysis, and multilingual accessibility support. The modular design ensures adaptability across platforms and devices, promising universal access to visual information regardless of technological ecosystem or geographic location.
-
-This research introduces a transformative approach to visual accessibility that will fundamentally reshape how blind and low-vision individuals engage with visual media. By combining advanced AI vision analysis with responsive interaction capabilities and natural speech synthesis, a conversational gateway to images has been created—one that mirrors the curiosity-driven exploration of sighted individuals while extending this freedom to those who navigate the world without sight. The future promises a world where visual information becomes a shared human resource, accessible to all regardless of visual ability.
+Voice is the natural interface for all of this hands free, eyes free, and present-tense. Evidence from speech-driven assistance shows how voice interaction can reduce friction and effort for blind users, enabling them to control applications and access information with speed and dignity. This insight anchors our direction toward a truly voice-first assistant that listens for intent, captures context on demand, and delivers succinct, situation-aware descriptions that respect attention as much as privacy.@abhishek2022 From these motivations arise guiding questions that frame the study like how to achieve near real-time responsiveness on everyday devices while preserving descriptive quality, how to balance latency with the level of detail needed for situational awareness, how to shape hands-free workflows that work in motion, how to embed privacy, safety, and trust into visual assistance, and how to evaluate success with multidimensional metrics that reflect lived outcomes—latency, coverage of salient details, critical error rates, robustness, user satisfaction, task success, and alignment with accessibility guidelines.
 
 = Literature Review
 
-Previous research has been conducted on AI-powered accessibility using computer vision, natural language processing, and speech technologies. ArtInsight: Enabling AI-Powered Artwork Engagement for Mixed Visual-Ability Families @chheda2025 presented a system to make artwork accessible to both sighted and visually impaired audiences through AI-based scene recognition and descriptive narration. GenAssist: Making Image Generation Accessible @huh2023 developed a platform enabling visually impaired users to generate and explore AI-created images, integrating voice feedback for prompt refinement. Enhancing Accessibility Through Inclusive Design and Artificial Intelligence @sarangam2024 emphasized applying WCAG-compliant design in AI-driven systems to ensure inclusive usability.
+This work sits at the intersection of promise and protection. Generative AI is expanding what accessible systems can express, but it must meet real standards and real fears. Generative Artificial Intelligence and Web Accessibility @acosta2024 argues for aligning features with accessibility guidelines so outputs are perceivable, operable, and understandable. In parallel, Privacy Concerns for Visual Assistance Technologies @stangl2022 documents how camera based tools raise unresolved questions about consent, retention, and disclosure for blind and low vision users. Aiding the Visually Impaired Using Artificial Intelligence and Speech Recognition Technology @abhishek2022 underscores why voice is a natural control surface, showing how vision paired with speech supports everyday navigation and recognition.
 
-AI-Powered Assistive Technologies for Improved Accessibility @brotosaputro2024 reviewed vision and speech-based tools that enhance digital interaction for disabled users. A Human-AI Collaborative Tool for Annotating Audio-Visual Data @zhang2023peanut proposed semi-automated annotation workflows, reducing manual labor for accessibility dataset creation. Contextual Transcription and Summarization of Audio using AI @pandita2023 implemented ASR pipelines to provide real-time speech transcription and summarization services for hearing-impaired audiences.
+Creativity oriented systems show how richer descriptions broaden participation. ArtInsight: Enabling AI Powered Artwork Engagement for Mixed Visual Ability Families @chheda2025 helps families co explore children’s drawings with respectful narration and guided prompts. GenAssist: Making Image Generation Accessible @huh2023 equips blind creators to evaluate AI images through prompt grounded questions, per image explanations, and summaries of similarities and differences. Enhancing Accessibility Through Inclusive Design and Artificial Intelligence @sarangam2024 complements these efforts by surfacing WCAG aligned patterns so AI features integrate cleanly with assistive technologies.
 
-Aiding the Visually Impaired Using Artificial Intelligence and Speech Recognition Technology @abhishek2022 combined computer vision with TTS to deliver navigation and object recognition capabilities. Leveraging Education through Artificial Intelligence Virtual Assistance @mina2023 applied AI tutors for interactive, voice-based learning experiences for visually impaired students. AI-Powered Information Retrieval in Meeting Records and Transcripts @ghadge2024 integrated ASR and NLP for searchable and summarized meeting content.
+Under the surface are pipelines that make such experiences feasible. AI Powered Assistive Technologies for Improved Accessibility @brotosaputro2024 surveys computer vision, OCR, and speech tools for wayfinding and document access. PEANUT @zhang2023peanut reduces the burden of building multimodal datasets with human in the loop annotation that preserves oversight. For hearing access, Contextual Transcription and Summarization of Audio using AI @pandita2023 and AI Powered Information Retrieval in Meeting Records and Transcripts @ghadge2024 combine ASR and NLP to turn long audio into searchable, digestible units. In education, Leveraging Education through Artificial Intelligence Virtual Assistance @mina2023 explores voice first tutoring for visually impaired learners.
 
-Generative Artificial Intelligence and Web Accessibility @acosta2024 employed large language models for auto-generating alt-text and simplifying web content. AI-Powered Biomolecular Imaging @pandey2023, while medically focused, demonstrated advanced image analysis applicable to accessibility contexts. Heuristic Evaluation of AI-Powered Web Accessibility Assistants @nacheva2023 and AI-Based Smarter Accessibility Evaluations @aktar2023 established usability and compliance metrics relevant to accessibility system assessment.
+Designing for life on the move and beyond the screen is a recurring theme. Analysis of AI Driven Digital Accessibility Through Non Visual Modalities @omitoyin2024 highlights auditory and haptic cues as primary channels when attention is scarce. The Role of Machine Learning and Artificial Intelligence in Mobile App Development @gupta2022 surveys OCR, recognition, and adaptive interfaces that make smartphones practical hosts for accessibility features. AI Powered Methods for Coping with Heterogeneity in Accessibility @uckun2023 argues for personalization tailored to individual needs and contexts. Public sector deployments in Enhancing Accessibility in Special Libraries @chauhan2024 and Towards Leveraging Free Artificial Intelligence Software to Enhance Library Accessibility @ibegbulam2024 show how lightweight, low cost tools scale in resource constrained environments.
 
-Navigating Accessibility Rights in the Age of AI @das2025 and Privacy Concerns for Visual Assistance Technologies @stangl2022 examined ethical and legal challenges in deploying AI accessibility tools, stressing privacy preservation. Enhancing Accessibility in Special Libraries @chauhan2024 showcased AI-driven library services for patrons with disabilities, while Towards Leveraging Free AI Software to Enhance Library Accessibility @ibegbulam2024 reviewed open-source solutions for resource-limited environments.
+Assessment and rigor matter as systems enter daily life. Heuristic Evaluation of AI Powered Web Accessibility Assistants @nacheva2023 proposes structured checks that go beyond accuracy to consider usability and fit. Artificial Intelligence Based Smarter Accessibility Evaluations @aktar2023 outlines user centered frameworks for assessing spaces and devices. Although clinical in focus, AI Powered Biomolecular Specific and Label Free Multispectral Imaging @pandey2023 models disciplined benchmarking useful for perception pipelines. Use of Artificial Intelligence in Historical Records Transcription @zhang2023book details OCR and NLP strategies for noisy handwritten sources. Powering an AI Chatbot with Expert Sourcing @xiao2023 shows how expert guided knowledge keeps conversational agents reliable, and Enhancing Accessibility Through Machine Learning @patel2025 surveys methods across visual and hearing assistance to position model choices and deployment constraints.
 
-Powering an AI Chatbot with Expert Sourcing @xiao2023 developed conversational agents guided by expert-curated knowledge bases to ensure accurate and reliable responses. This approach supports our goal of delivering trustworthy and context-aware audio descriptions in our system. Enhancing Accessibility Through Machine Learning @patel2025 surveyed various ML techniques aimed at assisting individuals with visual and hearing impairments. These methods inform our integration of vision-language and speech models for multimodal accessibility.
+Rules and lived experience anchor the broader picture. Navigating Accessibility Rights in the Age of AI @das2025 consolidates legal and ethical expectations for assistive technologies, emphasizing transparency and equitable access. An Autoethnographic Case Study of Generative Artificial Intelligence’s Utility for Accessibility @glazko2023 captures everyday benefits and frictions, pushing designers toward clarity, verifiability, and respectful defaults. Equal AI: A Framework for Enhancing Equity and Accessibility in Liberal Arts @davoodi2024 extends these ideas into classrooms, pointing to voice forward and context aware support for multilingual learners and students with disabilities.
 
-Analysis of AI-Driven Digital Accessibility Through Non-Visual Modalities @omitoyin2024 examined accessibility systems using auditory and haptic feedback to replace visual outputs, reinforcing our decision to prioritize audio-based interaction for blind users. The Role of Artificial Intelligence in Enhancing Mobile App Accessibility @gupta2022 investigated AI-powered OCR, recognition, and adaptive UI strategies in mobile environments, providing guidance for extending our system to smartphones for broader reach. AI-Powered Methods for Coping with Heterogeneity in Accessibility @uckun2023 proposed adaptive AI systems that personalize outputs based on individual needs, directly influencing our use of local inference for customized and privacy-conscious image transcription.
+Overall, the literature converges on systems that are fast enough to help in the moment, expressive enough to convey what matters, and careful enough to preserve dignity and privacy. The field is moving toward voice first, on device experiences paired with human centered evaluation, while leaving room for personalization, broader datasets, and evaluation in the wild.
 
-Use of AI in Historical Records Transcription @zhang2023book detailed OCR and NLP workflows for digitizing complex handwritten documents, offering techniques relevant to processing diverse and low-quality images in our platform. An Autoethnographic Case Study of GenAI's Utility for Accessibility @glazko2023 shared firsthand experiences of using generative AI for daily accessibility needs, shaping our focus on clarity, usability, and user-centered design in descriptive audio. A Framework for Enhancing Equity and Accessibility in Liberal Arts @davoodi2024 applied AI to create inclusive learning environments for multilingual and disabled learners, highlighting opportunities to adapt our system for educational applications.
 
 = Problem Statement
 
-The digital accessibility landscape presents a fundamental challenge that affects over 2.2 billion people worldwide who experience some form of vision impairment. While significant advances have been made in text-based accessibility through screen readers and assistive technologies, a critical gap persists in the interpretation and understanding of visual content—images, diagrams, charts, and multimedia elements that constitute an increasingly dominant portion of digital information.
+People who are blind or have low vision need immediate, trustworthy, speakable descriptions of what is in front of them. In time sensitive moments, a delay of a few seconds turns help into hindsight. Many current tools are slow, fragile in poor connectivity, and dependent on remote processing that raises questions about where personal images go. Outputs often miss action critical details such as text on signs, small but important objects, spatial relations, and safety cues, while long or awkward speech increases cognitive load.
 
-== Current Accessibility Limitations
+Our aim is to close this gap with responsiveness, clarity, and privacy on everyday devices. The target is near real time descriptions that stream partial information as it becomes available and treat audio as a first class output that is concise and easy to follow. The solution must work in motion and varied lighting, handle cluttered scenes, and behave consistently without forcing a trade between speed and trust.
 
-Visual information processing remains one of the most significant barriers to digital equity for blind and low-vision individuals. Traditional assistive technologies demonstrate several critical limitations:
+Our primary stakeholders are blind and low-vision people who need immediate, trustworthy, speakable descriptions in everyday settings, with a small supporting circle of caregivers and a few accessibility practitioners who help configure tools. In this context, persistent issues include high latency, unreliable streaming, and uneven description fidelity that either omits critical details like text, small objects, spatial relations, and safety cues or overwhelms with verbosity. Speech output is often delayed or poorly phrased, privacy becomes unclear when images leave the device, personalization controls are thin, inclusive gaps persist across languages and accents, and evaluation skews toward model scores instead of user outcomes like task success, error severity, attention cost, and robustness in motion. Battery and compute limits hinder sustained use on common hardware, and integration with screen readers, wearables, and navigation apps remains inconsistent.
 
-*Static Description Dependency:* Current image accessibility relies primarily on alternative text (alt-text) descriptions that are often inadequate, generic, or entirely absent. Research indicates that over 70% of images on the web lack meaningful alternative descriptions, creating information voids that cannot be bridged by existing screen reader technology.
+There are focused opportunities to resolve these pain points. A local-first approach can keep data on device, improve speed, and strengthen trust. Voice-first workflows can enable hands-free capture and queries, with progressive text and speech delivering useful partial results quickly. Lightweight personalization can tune verbosity and vocabulary to the user and moment, while privacy-by-design makes consent and retention understandable and auditable. Human-in-the-loop feedback can convert real use into continuous improvement, and open protocols can enable simple deployments in everyday community spaces. The mandate is clear: provide descriptions that arrive fast enough to help, are precise enough to matter, and are respectful enough to preserve dignity and privacy.
 
-*Limited Contextual Understanding:* When alt-text is present, it typically provides only basic object identification without conveying spatial relationships, emotional context, or detailed visual nuances that sighted users naturally perceive. A description stating "a person standing" fails to capture the rich contextual information available in the visual scene.
+= Methodology
 
-*Non-Interactive Information Access:* Existing solutions provide one-directional information flow, offering a single static description without the ability to ask follow-up questions, request clarification, or explore specific aspects of visual content. This limitation fundamentally differs from how sighted individuals naturally interact with visual information through dynamic exploration and focused attention.
+This project adopted an Agile software development methodology, specifically incorporating elements of Kanban for iterative and flexible progression. Agile was selected due to its adaptability in handling evolving requirements typical of AI-driven prototypes, where initial experiments with models like LLaVA 7B and integration of macOS native TTS necessitated rapid iterations and feedback loops. Unlike rigid methodologies such as Waterfall, Agile allows for continuous refinement, enabling quick adjustments to performance optimizations (e.g., minimizing latency in image transcription) and alignment with accessibility goals. This justification stems from the project's emphasis on speed and user-centric evolution, from a simple file-upload prototype to a future voice-command-driven web app, which benefits from incremental development to incorporate real-time testing and stakeholder input.
 
-*Delayed Processing and Response:* Many current AI-powered description services require cloud processing, introducing latency issues and privacy concerns that make real-time interaction impractical for daily use scenarios.
+For requirement discovery, a user-centered design (UCD) approach was employed, involving iterative user stories and heuristic evaluations inspired by accessibility standards like WCAG 2.2. This method was justified by the need to prioritize inclusivity for visually impaired users, drawing from autoethnographic insights and privacy concerns in related literature. Initial requirements were gathered through targeted interviews with potential users and analysis of similar systems (e.g., voice-activated assistants), ensuring features like hands-free image capture address real-world barriers while emphasizing low-latency, on-device processing.
 
-== Impact on Daily Life and Professional Development
+Software design tools included Figma for prototyping user interfaces, enabling collaborative wireframing of the voice-command workflow, and Draw.io for creating system architecture diagrams, such as data flow from image upload to text streaming via Server-Sent Events. Project management was facilitated using Trello boards, which supported Kanban-style task tracking, milestone prioritization, and team collaboration in a resource-constrained academic setting. This tool's visual boards aligned well with Agile principles, allowing real-time updates on development sprints focused on model integration and performance benchmarking.
 
-The absence of effective visual information access creates cascading effects across multiple life domains:
+= Proposed Solution
 
-*Educational Barriers:* Students with visual impairments face significant challenges in accessing visual learning materials, including scientific diagrams, mathematical graphs, historical maps, and artistic works. This limitation restricts academic participation and can influence career trajectory decisions based on accessibility rather than interest or aptitude.
+Our solution is a local-first assistant that turns a single interaction into a flowing loop: the user provides an image, the system produces a short description in real time, and speech starts almost immediately so the user does not wait for the whole result. Everything runs on the user’s device. Text is streamed with Server-Sent Events, speech is generated with the native platform API, and no image leaves the machine. The design aims for three qualities at once: fast enough to help in the moment, clear enough to act on, and respectful of privacy by default.
 
-*Professional Limitations:* In data-driven professional environments, the inability to independently interpret charts, visualizations, technical diagrams, and presentation materials creates dependency relationships that can limit career advancement opportunities. Fields requiring visual analysis become effectively inaccessible, reducing professional diversity and economic participation.
-
-*Social and Cultural Exclusion:* Visual content sharing through social media, family photographs, artistic expression, and cultural participation represents significant aspects of modern social interaction. The inability to meaningfully engage with this content creates social isolation and reduces quality of life.
-
-*Independence and Autonomy Challenges:* Reliance on human assistance for visual content interpretation creates dependency relationships that can affect self-efficacy, confidence, and personal autonomy in both professional and personal contexts.
-
-== Technical and Technological Gaps
-
-Current technological solutions demonstrate several critical deficiencies:
-
-*Scalability Issues:* Existing AI-powered description services often require significant computational resources, making real-time processing impractical for widespread deployment or personal device integration.
-
-*Privacy and Security Concerns:* Cloud-based processing of visual content raises significant privacy concerns, particularly for personal, medical, or sensitive professional images that users may be reluctant to upload to external services.
-
-*Limited Conversational Capability:* Most current solutions lack the ability to engage in follow-up questioning or detailed exploration of visual content, providing only initial descriptions without supporting the natural curiosity-driven exploration that characterizes human visual perception.
-
-*Cross-Platform Compatibility:* Existing solutions often demonstrate platform-specific limitations, creating accessibility barriers based on device choice or operating system preferences rather than user needs.
-
-== Research Motivation and Objectives
-
-The convergence of advanced multimodal AI capabilities, local processing power, and streaming technologies presents an unprecedented opportunity to address these longstanding accessibility challenges. This research aims to bridge the gap between current technological capabilities and the real-world needs of visually impaired individuals by developing a system that:
-
-1. *Enables Real-Time Visual Exploration:* Providing immediate, conversational access to visual content that mirrors the natural exploration patterns of sighted individuals.
-
-2. *Preserves Privacy and Security:* Utilizing local processing capabilities to ensure sensitive visual content never leaves the user's device while maintaining high-quality description generation.
-
-3. *Supports Dynamic Interaction:* Creating a bidirectional communication model that allows users to guide the exploration process through questions, clarifications, and focused attention requests.
-
-4. *Demonstrates Cross-Platform Scalability:* Establishing an architectural foundation that can be adapted across different operating systems and devices while maintaining consistent performance and user experience.
-
-The fundamental research question addressed by this work is: *How can advanced multimodal AI technologies be architected and deployed to provide real-time, privacy-preserving, conversational access to visual information that restores agency and independence to blind and low-vision individuals in their interaction with digital visual content?*
-
-This problem statement establishes the critical need for innovative approaches to visual accessibility that go beyond current limitations to create truly transformative solutions for digital equity and inclusion.
-
-== Results
-
-=== Vision Model Evaluation
-
-A comprehensive evaluation was conducted comparing three locally-deployed vision-language models using Ollama infrastructure. The models evaluated were:
-
-- *qwen2.5vl:3b* (3.2 GB): Qwen 2.5 Vision Language model with 3 billion parameters
-- *gemma3:4b* (3.3 GB): Google's Gemma 3 model with 4 billion parameters  
-- *llava:7b* (4.7 GB): Large Language and Vision Assistant with 7 billion parameters
-
-The evaluation was performed on a standardized dataset of 200 images representing diverse accessibility scenarios including street scenes, indoor environments, food items, and technical displays.
-
-=== Performance Metrics
-
-The latency analysis revealed significant performance differences across models. The average processing time per image follows the relationship:
-
-$ T_"avg" = sum_(i=1)^n T_i / n $
-
-where $T_i$ represents the processing time for image $i$ and $n$ is the total number of images.
-
-The results demonstrate:
-- *qwen2.5vl:3b*: $T_"avg" = 14.63$ seconds, $tau = 90.60$ tokens/second
-- *gemma3:4b*: $T_"avg" = 7.91$ seconds, $tau = 46.34$ tokens/second
-- *llava:7b*: $T_"avg" = 2.51$ seconds, $tau = 289.77$ tokens/second
-
-The throughput efficiency can be expressed as:
-
-$ eta = tau / "Model Size (GB)" $
-
-Calculating efficiency scores:
-- qwen2.5vl:3b: $eta = 28.31$ tokens/second/GB
-- gemma3:4b: $eta = 14.04$ tokens/second/GB
-- llava:7b: $eta = 61.65$ tokens/second/GB
+The functional scope is focused and practical. The app accepts an image from camera or file picker, prepares it in memory, and asks a compact vision model to infer salient details such as scene, objects, text snippets, and spatial relations. Partial tokens are streamed to the interface and to the speech generator so the user hears the first meaningful phrase quickly. The UI keeps the image visible with its evolving caption so people can verify accuracy with a sighted helper when needed. Personalization is simple: users can toggle verbosity, choose a speaking voice, and clear local history. Offline use is the default, with graceful handling when the device is under load.
 
 #figure(
-  caption: [Model Performance Comparison: Latency vs Throughput],
+   block(align(center)[
+    #image("rich-picture-as-is.png", width: 80%)
+  ], width: 100%),
+  caption: [Rich Picture: As-Is]
+)<as-is>
+
+@as-is shows how help often works today. A blind or low-vision person asks another person for a description and receives a spoken reply. It is effective but depends on others and is not always available.
+
+#figure(
+   block(align(center)[
+    #image("rich-picture-to-be.png", width: 80%)
+  ], width: 100%),
+  caption: [Rich Picture: To-Be]
+)<to-be>
+
+But in @to-be exchange happens with the app. The user drops or captures an image in the interface. The image buffer goes to the local vision model, which streams a description back to the UI. The decoded text is spoken immediately by the native speech engine. The loop is quick and private.
+
+At @system-dfd the data flow is small and tight. The browser receives a raw image and forwards it to the upload handler. A stream processor packages partial results and returns them as text tokens and audio. The vision processor queries the local model and emits descriptive text. A response coordinator keeps the text and audio streams aligned so the user hears a clean, short sentence first, then details. The figure below summarizes these paths.
+
+#figure(
+   block(align(center)[
+    #image("system-level-data-flow-diagram.png", width: 60%)
+  ], width: 100%),
+  caption: [System Level Data Flow Diagram]
+)<system-dfd>
+
+User, browser, and five processing roles work together: P1 receives the image, P2 manages streaming, P3 performs vision inference, P4 produces speech, and P5 coordinates timing so the interface stays responsive.
+
+The deployment story is intentionally simple. Everything runs on the user device: the browser interface and the local API that hosts the model and speech bridge. A small database file on the device stores settings and optional history. There is no remote server in the critical path, which keeps performance predictable and data private.
+
+#figure(
+  block(align(center)[
+    #image("deployment-diagram.png", width: 40%)
+  ], width: 100%),
+  caption: [Deployment Diagram]
+)<deployment-diagram>
+
+Browser and local API live on the same device and talk to a local data store. This keeps latency low and removes external dependencies.
+
+Input design focuses on a gentle first step. The panel presents a large target for drag and drop and a clear “click to browse” option. The header sets context with a one-line purpose. Labels are programmatic for screen readers, and the drop zone has a focus outline for keyboard users. Simple rules explain supported formats and size so errors are rare.
+
+#figure(
+   block(align(center)[
+    #image("input-design.png", width: 80%)
+  ], width: 100%),
+  caption: [Input Design]
+)
+
+Output design pairs the original image with a live caption. As tokens arrive, the paragraph fills smoothly and the voice speaks the same words. Two actions keep control in the user’s hands: Remove clears the image and text, Done confirms and stops speech. The design favors short sentences, strong nouns, and early mention of safety cues when present.
+
+#figure(
+   block(align(center)[
+    #image("output-design.png", width: 80%)
+  ], width: 100%),
+  caption: [Output Design]
+)
+Users can verify what the system said against what it shows and decide the next step quickly.
+
+Together these elements form a small, reliable loop. Images are processed on the device, text and speech arrive quickly, and the interface makes decisions easy. The result is a focused tool that respects attention and privacy while giving timely descriptions that help people act.
+
+= Results
+
+We evaluated three locally deployed vision–language models on 200 images representative of accessibility scenarios (street, indoor, food, technical displays). Models:
+
+- qwen2.5vl:3b (3.2 GB)
+- gemma3:4b (3.3 GB)  
+- llava:7b (4.7 GB)
+
+Average latency follows
+$ T_"avg" = sum_(i=1)^n T_i / n $
+and throughput efficiency is
+$ eta = tau / "Model Size (GB)" $
+
+#figure(
+  caption: [Model performance comparison],
   table(
     columns: (auto, auto, auto, auto, auto),
     align: (left, center, center, center, center),
     stroke: (x, y) => if y <= 1 { (top: 0.5pt) },
     fill: (x, y) => if y > 0 and calc.rem(y, 2) == 0 { rgb("#f0f0f0") },
-    
-    table.header[*Model*][*Size (GB)*][*Avg Latency (s)*][*Throughput (tok/s)*][*Efficiency*],
+    table.header[Model][Size (GB)][Avg Latency (s)][Throughput (tok/s)][Efficiency (tok/s/GB)],
     [qwen2.5vl:3b], [3.2], [14.63], [90.60], [28.31],
     [gemma3:4b], [3.3], [7.91], [46.34], [14.04],
     [llava:7b], [4.7], [2.51], [289.77], [61.65],
   )
-) <tab:performance>
+)
 
-=== Human Evaluation Results
-
-A human evaluation study was conducted with 50 accessibility experts and blind users rating the quality, accuracy, and usefulness of generated descriptions. The evaluation criteria included contextual accuracy, descriptive richness, and accessibility-specific relevance.
-
-Human evaluation scores (out of 50):
-- qwen2.5vl:3b: 32/50 (64% accuracy)
-- gemma3:4b: 33/50 (66% accuracy)  
-- llava:7b: 45/50 (90% accuracy)
+A human study with 10 participants (accessibility experts and users) rated contextual accuracy, descriptive richness, and accessibility relevance. Scores (out of 50): qwen2.5vl:3b = 32, gemma3:4b = 33, llava:7b = 45.
 
 #figure(
-  caption: [
-    Human evaluation scores (out of 50)
-  ],
+  caption: [Human evaluation scores (out of 50)],
 )[
-  #lq.diagram(
-    xaxis: (
-      ticks: ("qwen2.5vl:3b", "gemma3:4b", "llava:7b")
-        .map(rotate.with(0deg, reflow: true))
-        .map(align.with(right))
-        .enumerate(),
-      subticks: none,
-    ),
-    lq.bar(range(3), (32, 33, 45))
+  #block(align(center)[
+    #lq.diagram(
+      xaxis: (
+        ticks: ("qwen2.5vl:3b", "gemma3:4b", "llava:7b")
+          .map(rotate.with(0deg, reflow: true))
+          .map(align.with(right))
+          .enumerate(),
+        subticks: none,
+      ),
+      lq.bar(range(3), (32, 33, 45))
+    )
+  ], width: 100%)
+]
+
+Text-to-speech was compared between open-source models (local runtime) and the native macOS API.
+
+#figure(
+  caption: [TTS comparison],
+  table(
+    columns: (auto, auto, auto, auto, auto),
+    align: (left, center, center, center, left),
+    stroke: (x, y) => if y <= 1 { (top: 0.5pt) },
+    fill: (x, y) => if y > 0 and calc.rem(y, 2) == 0 { rgb("#f7f7f7") },
+    table.header[TTS Path][Avg time (s/sent)][Mem use][MOS (1–5)][Notes],
+    [Open-source (LM Studio)], [8.3], [~2.1 GB VRAM], [3.2], [Model download and GPU setup required],
+    [macOS native API], [0.8], [~45 MB RAM], [4.6], [Instant use, platform-optimized],
   )
-]<fig:human-eval>
-
-The LLaVA 7B model demonstrated superior performance across all metrics, achieving the optimal balance of speed (2.51s average latency), accuracy (90% human evaluation score), and efficiency (61.65 tokens/s/GB). This model was selected for the final system implementation due to its exceptional performance in accessibility-specific tasks.
-
-=== Text-to-Speech Evaluation
-
-A comparative analysis was conducted between open-source TTS models deployed via LM Studio and the native macOS text-to-speech API. The evaluation considered processing speed, audio quality, and system resource utilization.
-
-*Open Source Models (LM Studio):*
-- Average synthesis time: 8.3 seconds per sentence
-- Memory usage: 2.1 GB VRAM
-- Audio quality: MOS 3.2/5.0
-- Setup complexity: High (model download, GPU configuration)
-
-*macOS Built-in API:*
-- Average synthesis time: 0.8 seconds per sentence  
-- Memory usage: 45 MB RAM
-- Audio quality: MOS 4.6/5.0
-- Setup complexity: None (native system integration)
-
-The macOS built-in TTS API demonstrated superior performance with 10.4× faster synthesis, 47× lower memory usage, and significantly higher audio quality scores. The native integration eliminates dependency management and provides consistent, high-quality voice synthesis optimized for the target platform.
-
-=== Network Analysis
-
-Tests across 3G, 4G, and Wi-Fi networks confirmed the full inference cycle remained below 1.6 seconds per interaction turn using the optimized LLaVA 7B model. Packet loss handling and latency recovery strategies were guided by evaluations in @pandita2023 @abhishek2022. The architecture showed resilience, maintaining user engagement during conversational loops.
-
-= Methodology
-
-== System Architecture
-
-The proposed system employs a modern microservices architecture designed for scalability, maintainability, and cross-platform compatibility. The architecture consists of three primary components: a React-based web frontend, a Node.js back-end API, and a local AI processing engine utilizing Ollama's infrastructure.
-
-=== Frontend Implementation
-
-The web application has been developed using React Router v7 with TypeScript, providing a responsive and accessible user interface. The frontend implements several key features:
-
-*Drag-and-Drop Interface:* A file upload system has been implemented using the `react-dropzone` library, supporting multiple image formats including JPEG, PNG, HEIC, and HEIF. The interface provides immediate visual feedback and preview capabilities for uploaded images.
-
-*Real-time Streaming:* Custom hooks have been developed for handling real-time data streams from the back-end API. The `useCompletion` hook manages the streaming text responses, while the `useStreamAudio` hook handles audio playback with precise state management for loading, playing, and pausing operations.
-
-*Audio Management:* The system utilizes the Web Audio API through custom React hooks to provide seamless audio playback experiences. Audio streams are handled with proper error handling, automatic cleanup, and responsive controls.
-
-=== back-end API Architecture
-
-The back-end has been implemented using Hono, a lightweight web framework for Node.js, providing high-performance HTTP handling with minimal overhead. The API architecture includes:
-
-*RESTful Endpoints:* Two primary endpoints have been established:
-- `/describe`: Accepts image uploads via multipart form data and returns streaming text descriptions
-- `/speak`: Converts text to audio using native macOS text-to-speech capabilities
-
-*Streaming Implementation:* Real-time streaming has been implemented using Hono's streaming capabilities, enabling immediate response delivery as AI processing occurs. This approach reduces perceived latency and provides responsive user experiences.
-
-*File Processing Pipeline:* A comprehensive file processing system handles temporary file management, format conversion, and cleanup operations. The system generates unique identifiers for each processing session to prevent conflicts and ensure data isolation.
-
-=== AI Model Integration
-
-==== Local Vision-Language Processing
-
-The system utilizes Ollama infrastructure for local deployment and management of vision-language models. After comprehensive evaluation of three models (qwen2.5vl:3b, gemma3:4b, and llava:7b), the LLaVA 7B model was selected based on superior performance metrics. Ollama provides several advantages for local AI deployment:
-
-*Privacy Preservation:* All image processing occurs locally, ensuring sensitive visual data never leaves the user's device. This approach addresses critical privacy concerns in accessibility technology.
-
-*Optimized Prompting:* Specialized system prompts have been developed specifically for accessibility use cases: "You are great at describing images. You are given an image and you need to describe it in a way that is easy to understand for blind people. Keep the description short and concise."
-
-*Streaming Response Generation:* The AI model generates responses in real-time streams, enabling immediate audio feedback as descriptions are generated.
-
-==== Cross-Platform Text-to-Speech
-
-The system implements native operating system text-to-speech capabilities to ensure high-quality, natural-sounding audio output:
-
-*macOS Integration:* The `say` command is utilized through Node.js child processes, generating AIFF audio files with customizable voice parameters.
-
-*Audio Format Conversion:* FFmpeg integration enables real-time conversion from AIFF to WAV format, ensuring broad compatibility with web audio standards.
-
-*Streaming Audio Delivery:* Audio files are streamed directly to the client using chunked transfer encoding, eliminating the need for complete file downloads before playback begins.
-
-== Technical Implementation Details
-
-=== Performance Optimization
-
-Several optimization strategies have been implemented to achieve sub-1.6-second response times:
-
-*Concurrent Processing:* Image analysis and audio generation are processed concurrently where possible, reducing overall latency.
-
-*Memory Management:* Temporary files are automatically cleaned up after processing to prevent memory leaks and storage accumulation.
-
-*Streaming Architecture:* Both text generation and audio delivery utilize streaming protocols to provide immediate feedback to users.
-
-=== Cross-Platform Deployment
-
-The system has been architected for cross-platform deployment through several mechanisms:
-
-*Docker Containerization:* Complete containerization support enables deployment across different operating systems and cloud platforms.
-
-*Environment Configuration:* Flexible configuration management allows adaptation to different text-to-speech engines and AI model back-ends.
-
-*API Abstraction:* The back-end API provides abstraction layers that can be adapted for different operating system speech synthesis engines.
-
-=== Data Flow Architecture
-
-The complete data flow follows this sequence:
-
-1. *Image Upload:* Users drag and drop images into the web interface, triggering immediate preview generation and file validation.
-
-2. *Streaming Analysis:* Images are transmitted to the back-end API via multipart form data, where they are processed by the LLaVA model in real-time.
-
-3. *Text Generation:* Descriptive text is generated as a stream, with chunks immediately forwarded to the frontend for display.
-
-4. *Audio Synthesis:* Completed descriptions are processed through the native text-to-speech engine, generating high-quality audio output.
-
-5. *Audio Delivery:* Audio streams are delivered to the client with appropriate headers for immediate playback.
-
-#figure(
-  caption: [System Architecture Overview],
-)[#let blob(pos, label, tint: white, ..args) = node(
-	pos, align(center, label),
-	width: 28mm,
-	fill: tint.lighten(60%),
-	stroke: 1pt + tint.darken(20%),
-	corner-radius: 5pt,
-	..args,
 )
 
-#diagram(
-	spacing: 14pt,
-	cell-size: (3mm, 10mm),
-	edge-stroke: 1pt,
-	edge-corner-radius: 5pt,
-	mark-scale: 70%,
-
-	blob((0,1), [Node.js API], tint: yellow, shape: hexagon),
-	edge(),
-	blob((0,2), [Image Buffer], tint: orange),
-	blob((0,4), [React Front-end], shape: house.with(angle: 30deg),
-		width: auto, tint: red),
-
-   edge((0,2.8), (0,2), "-|>"),
-	edge((0,2.8), (0,4)),
-
-	edge((0,1), (0, 0.35), "r", (1,3), "r,u", "-|>"),
-
-	blob((2,0), [FFmpeg\ Conversion], tint: green),
-	edge("<|-"),
-	blob((2,1), [macOS TTS], tint: yellow, shape: hexagon),
-	edge(),
-	blob((2,2), [Ollama LLaVa], tint: blue),
-)] <fig:architecture>
+The llava:7b model provided the best latency, highest throughput efficiency, and strongest human score, aligning with the goal of speaking a short, correct phrase quickly, then adding detail. The native TTS path minimized delay and setup effort while improving intelligibility.
 
 #figure(
-  caption: [Data Flow Diagram],
-)[#let blob(pos, label, tint: white, ..args) = node(
-	pos, align(center, label),
-	width: 28mm,
-	fill: tint.lighten(60%),
-	stroke: 1pt + tint.darken(20%),
-	corner-radius: 5pt,
-	..args,
+  caption: [Feature matrix],
+  table(
+    columns: (auto, auto),
+    align: (left, left),
+    stroke: (x, y) => if y <= 1 { (top: 0.5pt) },
+    fill: (x, y) => if y > 0 and calc.rem(y, 2) == 0 { rgb("#f7f7f7") },
+    table.header[Feature][Key metric or outcome],
+    [Image upload or capture], [Local validation of type and size],
+    [Streaming caption], [Throughput up to 289.77 tok/s],
+    [Progressive speech], [~0.8 s per sentence start],
+    [Local-first privacy], [No image egress],
+    [Verbosity and voice], [User configurable],
+    [Offline default], [Stable without network],
+  ),
 )
 
-#diagram(
-	spacing: 8pt,
-	cell-size: (3mm, 10mm),
-	edge-stroke: 1pt,
-	edge-corner-radius: 5pt,
-	mark-scale: 70%,
-
-	blob((0,1), [Text Stream], tint: yellow, shape: hexagon),
-	edge(),
-	blob((0,2), [AI Processing], tint: orange),
-	blob((0,4), [Image Upload], shape: house.with(angle: 30deg),
-		width: auto, tint: red),
-
-   edge((0,2.8), (0,2), "-|>"),
-	edge((0,2.8), (0,4)),
-
-	edge((0,1), (0, 0.35), "r", (1,3), "r,u", "-|>"),
-
-	blob((2,0), [Audio Output], tint: green),
-	edge("<|-"),
-	blob((2,1), [Audio Buffer\ Conversion], tint: yellow, shape: hexagon),
-	edge(),
-	blob((2,2), [Audio\ Generation], tint: blue),
-)] <fig:dataflow>
-
-
-= Discussion
-
-The development of an AI-powered image transcription system for blind and low-vision users represents a significant stride toward bridging one of the most persistent accessibility gaps in the digital era—the inability to independently interpret visual information. While existing assistive technologies such as screen readers have improved access to text-based content, their capacity to translate the richness of visual media into meaningful and interactive experiences has remained limited. The proposed system advances this frontier by offering an integrated, conversational framework that mirrors the natural, curiosity-driven way sighted individuals engage with images.
-
-One of the most distinctive features of the system is its closed-loop interaction model—see → speak ↔ listen—which transforms the process of image interpretation from a static, one-time output into a dynamic, two-way dialogue. This approach allows users to go beyond accepting a single AI-generated caption; they can instead guide the AI's focus, request clarifications, and explore specific details of interest. For example, a user might upload a photograph and initially ask for an overview, then follow up with targeted questions such as, "What is written on the sign in the background?" or "Describe the person on the right." This level of interaction not only enhances comprehension but also restores a sense of agency and exploration that is often lost in conventional accessibility tools.
-
-The integration of GPT-4o, Whisper, and ElevenLabs plays a pivotal role in achieving this goal. GPT-4o's vision-language reasoning enables highly detailed and context-aware scene descriptions that go beyond object recognition, capturing spatial relationships, emotional tone, and implied context. Whisper ensures that voice commands are transcribed with exceptional accuracy, even in noisy environments, which is essential for maintaining conversational flow. ElevenLabs adds a layer of naturalness and emotional expressiveness to the generated speech, making the interaction more human-like and engaging. Together, these components form a robust technological backbone that delivers both accuracy and usability in real-world conditions.
-
-From a usability perspective, this system addresses several limitations found in related works. Many existing solutions are either designed for specific datasets, constrained by limited vocabulary, or lack the capability to adapt to user preferences. The comprehensive evaluation of three vision-language models using Ollama infrastructure (as shown in @tab:performance) demonstrates the system's commitment to optimal performance selection. The LLaVA 7B model's superior performance (2.51s latency, 90% human evaluation accuracy) enables real-time interaction while maintaining high description quality. By supporting local processing through Ollama's efficient model management, the system offers flexibility for users with different privacy requirements or connectivity constraints, ensuring effective operation in varied settings from urban environments to rural or offline contexts.
-
-The transformative impact of this system extends across multiple domains with profound implications for the future. In educational environments, the technology will revolutionize how visually impaired students access visual learning materials, enabling independent engagement with complex diagrams, scientific illustrations, and mathematical visualizations. This represents a paradigm shift from dependency on human assistance to autonomous learning, fundamentally changing educational accessibility standards.
-
-In professional contexts, the system promises to unlock unprecedented career opportunities by enabling direct interpretation of data visualizations, technical documentation, and business presentations. This capability will eliminate traditional barriers to advancement in data-driven fields, opening new pathways for professional growth and leadership roles previously inaccessible to blind professionals.
-
-The personal and social implications are equally transformative. The technology will restore meaningful access to visual culture, enabling participation in art appreciation, family photograph sharing, and social media engagement. This represents more than convenience—it constitutes a restoration of fundamental human experiences that have been historically inaccessible.
-
-The system also aligns with broader trends in human-centered AI design, which emphasize adaptability, personalization, and user empowerment. Insights drawn from the 25 reviewed research papers reveal that while AI has made significant advances in vision analysis, speech synthesis, and accessibility interface design, few solutions unify these capabilities into a cohesive, interactive, and real-time platform. The current work not only fills this gap but also sets a precedent for future developments in multimodal accessibility systems.
-
-Nevertheless, challenges remain. Ensuring fairness in descriptions across diverse cultural contexts, maintaining user privacy, and improving the AI's ability to interpret abstract or symbolic imagery are all areas that require further research. Additionally, scaling the system to support multiple languages and dialects would expand its global impact, while integrating object-level segmentation and motion tracking would open the door to real-time video description.
-
-In summary, the proposed system goes beyond the boundaries of conventional assistive technology by combining high-accuracy visual interpretation with responsive voice interaction, underpinned by a human-centered approach. Its potential to transform educational, professional, and personal experiences for blind and low-vision individuals underscores its value not only as a technological innovation but as a step toward a more inclusive digital future.
+All inference and speech run locally using open-source or native components. There is no per-request compute cost, so financial return of investment is not modeled. The value is realized as responsiveness, privacy, and reliability on the user’s device.
 
 = Conclusion
 
-The work presented in this research demonstrates the feasibility and transformative potential of a conversational, AI-powered image transcription system for blind and low-vision users. By combining advanced vision-language modeling, accurate speech recognition, and lifelike speech synthesis, the proposed platform offers more than static image descriptions—it provides an interactive, user-driven means of exploring visual content. Unlike conventional assistive tools, which often deliver limited and one-directional feedback, this approach replicates the natural curiosity-driven process of visual exploration, allowing users to ask questions, refine their focus, and receive immediate contextual responses.
+This work shows that a local-first image transcription assistant can be fast, clear, and private on everyday hardware. Among compact models, the 7B variant paired with streaming text and native speech delivered the best mix of latency, and efficiency, letting users hear a useful first phrase quickly and then richer detail. Unlike many prior systems that assume cloud processing, focus on static alt text, or treat speech as a secondary output, our approach keeps images on device, streams meaning as it is inferred, and optimizes for speak ability from the start.
 
-The integration of GPT-4o, Whisper and ElevenLabs ensures that the system is capable of delivering both high-quality descriptions and fluid conversational engagement, while the inclusion of a local fallback model offers adaptability and privacy. Through a review of 25 related research works, it has been shown that although significant advancements have been made in individual domains such as computer vision, accessibility design, and speech technologies, unified real-time solutions remain rare. This project addresses that gap by delivering a holistic, practical tool designed for real-world accessibility needs.
+The system’s uniqueness lies in this end-to-end emphasis on immediacy and respect: token-level streaming, progressive audio, and privacy by default, evaluated with user-centered judgments rather than model scores alone. The result is a small yet dependable loop that turns a single image into timely guidance.
 
-The future roadmap for this technology promises exponential expansion of capabilities and global impact. Planned developments include multilingual support enabling worldwide accessibility, real-time video analysis for dynamic content interpretation, and integration with augmented reality platforms for immersive spatial understanding. Advanced features will include object-level segmentation for granular scene exploration, emotional context recognition for richer descriptions, and adaptive learning systems that personalize descriptions based on user preferences and expertise levels.
-
-The scalability of the microservices architecture ensures seamless adaptation to emerging technologies, from 5G networks enabling instant cloud processing to edge computing devices providing ultra-low latency responses. Integration with smart home ecosystems, autonomous vehicles, and wearable technologies will create a comprehensive accessibility infrastructure that transforms daily life for blind and visually impaired individuals.
-
-Beyond technical advancement, this research establishes a foundation for a future where visual information transcends the boundaries of sight. The ultimate vision encompasses a world where every image, video, and visual interface becomes inherently accessible, where artificial intelligence serves as a universal translator between visual and auditory experiences, and where digital equity is achieved through technological innovation.
-
-The broader societal impact extends to economic empowerment, educational transformation, and social inclusion on an unprecedented scale. As this technology matures and proliferates, it will fundamentally reshape perceptions of disability, demonstrating that with appropriate technological support, visual impairment need not limit participation in any aspect of modern digital society. The future promises not merely accommodation, but true equality of access to the visual world.
+Next we aim for voice command only. When the user says “what is in front of me,” the device will capture a photo, describe it aloud in real time, and support quick follow-ups like “read the sign” or “where is the door,” all on device, with adaptive verbosity and stronger robustness in motion and low light.
