@@ -130,24 +130,34 @@ The deployment story is intentionally simple. Everything runs on the user device
 
 Browser and local API live on the same device and talk to a local data store. This keeps latency low and removes external dependencies.
 
-Input design focuses on a gentle first step. The panel presents a large target for drag and drop and a clear “click to browse” option. The header sets context with a one-line purpose. Labels are programmatic for screen readers, and the drop zone has a focus outline for keyboard users. Simple rules explain supported formats and size so errors are rare.
+@input-design Input design focuses on a gentle first step. The panel presents a large target for drag and drop and a clear “click to browse” option. The header sets context with a one-line purpose. Labels are programmatic for screen readers, and the drop zone has a focus outline for keyboard users. Simple rules explain supported formats and size so errors are rare.
 
 #figure(
    block(align(center)[
     #image("input-design.png", width: 80%)
   ], width: 100%),
   caption: [Input Design]
-)
+)<input-design>
 
-Output design pairs the original image with a live caption. As tokens arrive, the paragraph fills smoothly and the voice speaks the same words. Two actions keep control in the user’s hands: Remove clears the image and text, Done confirms and stops speech. The design favors short sentences, strong nouns, and early mention of safety cues when present.
+@output-design Output design pairs the original image with a live caption. As tokens arrive, the paragraph fills smoothly and the voice speaks the same words. Two actions keep control in the user’s hands: Remove clears the image and text, Done confirms and stops speech. The design favors short sentences, strong nouns, and early mention of safety cues when present.
 
 #figure(
    block(align(center)[
     #image("output-design.png", width: 80%)
   ], width: 100%),
   caption: [Output Design]
-)
+)<output-design>
+
 Users can verify what the system said against what it shows and decide the next step quickly.
+
+#figure(
+  block(align(center)[
+    #image("research-question-mapping.png", width: 80%)
+  ], width: 100%),
+  caption: [Research Questions Mapping]
+)<research-question-mapping>
+
+@research-question-mapping mapping explains why each paper was chosen and what it helps answer. RQ1 to RQ5 reflect our goals: responsiveness on everyday devices, fidelity vs speed trade offs, hands free voice capture and queries, privacy and trust, and a practical evaluation framework. We selected papers that together cover technical methods, interaction design, and governance. Arrows indicate where a source supplies evidence, methods, or patterns that answer a given question. System and deployment studies anchor RQ1 and RQ3, pipeline and interaction work inform RQ2, privacy and rights analyses support RQ4, and heuristic and benchmarking studies ground RQ5. The dense links on RQ1, RQ3, and RQ5 show strong support for speed, voice first use, and measurement, while RQ2 and RQ4 form focused clusters around trade offs and safeguards.
 
 Together these elements form a small, reliable loop. Images are processed on the device, text and speech arrive quickly, and the interface makes decisions easy. The result is a focused tool that respects attention and privacy while giving timely descriptions that help people act.
 
